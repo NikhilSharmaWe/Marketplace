@@ -1,0 +1,119 @@
+// syntax = "proto3";
+
+// option go_package = "github.com/NikhilSharmaWe/golangmicro/proto";
+
+// service PriceFetcher {
+// 	rpc FetchPrice(PriceRequest) returns (PriceResponse);
+// }
+
+// message PriceRequest {
+// 	string ticker = 1;
+// }
+
+// message PriceResponse {
+// 	string ticker = 1;
+// 	float price = 2;
+// }
+
+syntax = "proto3";
+
+option go_package = "github.com/NikhilSharmaWe/marketplace/proto";
+
+service MarketplaceService {
+  // Shop-related methods
+  rpc CreateShop(CreateShopRequest) returns (Shop);
+  rpc GetShopByID(GetRequest) returns (Shop);
+//   rpc UpdateShop(UpdateShopRequest) returns (Shop);
+
+  // Product-related methods
+  rpc CreateProduct(CreateProductRequest) returns (Product);
+  rpc GetProductByID(GetRequest) returns (Product);
+//   rpc SearchProducts(SearchProductsRequest) returns (stream Product);
+
+  // Inventory-related methods
+//   rpc AddToInventory(AddToInventoryRequest) returns (Inventory);
+//   rpc GetInventory(GetInventoryRequest) returns (Inventory);
+  
+  // Serviceable products methods
+  rpc AddServiceableProduct(AddServiceableProductRequest) returns (ServiceableProduct);
+//   rpc GetServiceableProducts(GetServiceableProductsRequest) returns (stream Product);
+
+  // User-related methods
+  rpc CreateUser(CreateUserRequest) returns (User);
+  rpc GetUserByID(GetRequest) returns (User);
+
+//   // Neighbour-related methods
+//   rpc AddNeighbour(AddNeighbourRequest) returns (Neighbour);
+//   rpc GetNeighbours(GetNeighboursRequest) returns (stream User);
+}
+
+message CreateShopRequest {
+  string name = 1;
+  string location = 2;
+  string operationhours = 3;
+  repeated Product serviceableProduct = 4;
+}
+
+message CreateProductRequest {
+	string name = 1;
+	string description = 2;
+	float price = 3;
+}
+
+message CreateUserRequest {
+	string name = 1;
+	string location = 2;
+}
+  
+message CreateResponse {
+	bool created = 1;
+}
+
+message GetRequest {
+	string id = 1;
+}
+  
+// Define other request and response messages for other methods
+
+message Shop {
+  string id = 1;
+  string name = 2;
+  string location = 3;
+  string operationhours = 4;
+  repeated Product serviceableProduct = 5;
+}
+
+message Product {
+  // Product fields
+  string id = 1;
+  string name = 2;
+  string description = 3;
+  float price = 4;
+}
+
+message Inventory {
+  // Inventory fields
+}
+
+message ServiceableProduct {
+  // Serviceable product fields
+  string id = 1;
+  string productId = 2;
+  string shopId = 3;
+}
+
+message User {
+  // User fields
+  string id = 1;
+  string name = 2;
+  string location = 3;
+}
+
+message AddServiceableProductRequest {
+	string shopId = 1;
+	string productId = 2;
+}
+
+message Neighbour {
+  // Neighbour fields
+}
