@@ -1,20 +1,3 @@
-// syntax = "proto3";
-
-// option go_package = "github.com/NikhilSharmaWe/golangmicro/proto";
-
-// service PriceFetcher {
-// 	rpc FetchPrice(PriceRequest) returns (PriceResponse);
-// }
-
-// message PriceRequest {
-// 	string ticker = 1;
-// }
-
-// message PriceResponse {
-// 	string ticker = 1;
-// 	float price = 2;
-// }
-
 syntax = "proto3";
 
 option go_package = "github.com/NikhilSharmaWe/marketplace/proto";
@@ -23,28 +6,28 @@ service MarketplaceService {
   // Shop-related methods
   rpc CreateShop(CreateShopRequest) returns (Shop);
   rpc GetShopByID(GetRequest) returns (Shop);
-//   rpc UpdateShop(UpdateShopRequest) returns (Shop);
+  rpc GetShopsByServiceableProducts(GetShopsByServiceableProductsRequest) returns (Shops);
+  rpc GetShopForUser(GetShopForUserRequest) returns (Shops);
+
 
   // Product-related methods
   rpc CreateProduct(CreateProductRequest) returns (Product);
   rpc GetProductByID(GetRequest) returns (Product);
-//   rpc SearchProducts(SearchProductsRequest) returns (stream Product);
 
   // Inventory-related methods
-//   rpc AddToInventory(AddToInventoryRequest) returns (Inventory);
-//   rpc GetInventory(GetInventoryRequest) returns (Inventory);
+  rpc UpdateInventory(UpdateInventoryRequest) returns (Inventory);
+  rpc GetInventory(GetInventoryRequest) returns (Inventory);
   
   // Serviceable products methods
-  rpc AddServiceableProduct(AddServiceableProductRequest) returns (ServiceableProduct);
-//   rpc GetServiceableProducts(GetServiceableProductsRequest) returns (stream Product);
+  rpc AddServiceableProduct(AddServiceableProductRequest) returns (Shop);
+  rpc GetServiceableProducts(GetServiceableProductsRequest) returns (Products);
 
   // User-related methods
   rpc CreateUser(CreateUserRequest) returns (User);
   rpc GetUserByID(GetRequest) returns (User);
 
-//   // Neighbour-related methods
-//   rpc AddNeighbour(AddNeighbourRequest) returns (Neighbour);
-//   rpc GetNeighbours(GetNeighboursRequest) returns (stream User);
+  // Neighbour-related methods
+  rpc GetNearestNeighbour(GetNearestNeighbourRequest) returns (User);
 }
 
 message CreateShopRequest {
@@ -52,6 +35,7 @@ message CreateShopRequest {
   string location = 2;
   string operationhours = 3;
   repeated Product serviceableProduct = 4;
+  Coordinates coordinates = 5;
 }
 
 message CreateProductRequest {
@@ -63,6 +47,7 @@ message CreateProductRequest {
 message CreateUserRequest {
 	string name = 1;
 	string location = 2;
+	Coordinates coordinates = 3;
 }
   
 message CreateResponse {
@@ -73,14 +58,17 @@ message GetRequest {
 	string id = 1;
 }
   
-// Define other request and response messages for other methods
-
 message Shop {
   string id = 1;
   string name = 2;
   string location = 3;
   string operationhours = 4;
-  repeated Product serviceableProduct = 5;
+  repeated Product serviceableProducts = 5;
+  Coordinates coordinates = 6;
+}
+
+message Shops {
+	repeated Shop shops = 1;
 }
 
 message Product {
@@ -91,8 +79,28 @@ message Product {
   float price = 4;
 }
 
+message Products {
+	repeated Product products = 1;
+}
+
 message Inventory {
   // Inventory fields
+  string id = 1;
+  string shopId = 2;
+  string productId = 3;
+  int32 quantity = 4;
+}
+
+message UpdateInventoryRequest {
+	string shopId = 1;
+	string productId = 2;
+	int32 change = 3;
+	bool add = 4;
+}
+
+message GetInventoryRequest {
+	string shopId = 1;
+	string productId = 2;
 }
 
 message ServiceableProduct {
@@ -107,6 +115,7 @@ message User {
   string id = 1;
   string name = 2;
   string location = 3;
+  Coordinates coordinates = 6;
 }
 
 message AddServiceableProductRequest {
@@ -114,6 +123,25 @@ message AddServiceableProductRequest {
 	string productId = 2;
 }
 
-message Neighbour {
-  // Neighbour fields
+message GetServiceableProductsRequest {
+	string shopId = 1;
+}
+
+message GetShopsByServiceableProductsRequest {
+	string productId = 1;
+}
+
+message Coordinates {
+    double latitude = 1;
+    double longitude = 2;
+}
+
+message GetShopForUserRequest {
+	string userId = 1;
+	double maxDistanceInKM = 2;
+	string productId = 3;
+}
+
+message GetNearestNeighbourRequest{
+	string userId = 1;
 }
