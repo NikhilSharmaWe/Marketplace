@@ -68,7 +68,6 @@ func (app *application) UpdateInventory(ctx context.Context, shopId, productId s
 		return err
 	}
 
-	log.Printf("insertResult: %+v\n", err)
 	return nil
 }
 
@@ -85,7 +84,6 @@ func (app *application) UpdateServiceableProductsForShop(ctx context.Context, sh
 		return err
 	}
 
-	log.Printf("insertResult: %+v\n", err)
 	return nil
 }
 
