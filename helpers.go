@@ -181,10 +181,10 @@ func (app *application) GetShopsWithProduct(ctx context.Context, productId strin
 func calculateDistance(coord1, coord2 [2]float64) float64 {
 	const earthRadiusKm = 6371
 
-	lat1 := degToRad(coord1[1])
-	lon1 := degToRad(coord1[0])
-	lat2 := degToRad(coord2[1])
-	lon2 := degToRad(coord2[0])
+	lat1 := degToRad(coord1[0])
+	lon1 := degToRad(coord1[1])
+	lat2 := degToRad(coord2[0])
+	lon2 := degToRad(coord2[1])
 
 	deltaLat := lat2 - lat1
 	deltaLon := lon2 - lon1
