@@ -36,13 +36,13 @@ func (app *application) HandleCreateUser(w http.ResponseWriter, r *http.Request)
 	createReq := &proto.CreateUserRequest{}
 	err := app.readJSON(w, r, createReq)
 	if err != nil {
-		app.badRequestResponse(w, r, err)
+		app.errorResponse(w, r, http.StatusBadRequest, err.Error())
 		return
 	}
 
 	user, err := app.grpcClient.CreateUser(app.ctx, createReq)
 	if err != nil {
-		app.serverErrorResponse(w, r, err)
+		app.errorResponse(w, r, http.StatusInternalServerError, err.Error())
 		return
 	}
 
@@ -61,7 +61,7 @@ func (app *application) HandleGetUser(w http.ResponseWriter, r *http.Request) {
 
 	user, err := app.grpcClient.GetUserByID(app.ctx, &protoReq)
 	if err != nil {
-		app.serverErrorResponse(w, r, err)
+		app.errorResponse(w, r, http.StatusInternalServerError, err.Error())
 		return
 	}
 
@@ -75,13 +75,13 @@ func (app *application) HandleCreateShop(w http.ResponseWriter, r *http.Request)
 	createReq := &proto.CreateShopRequest{}
 	err := app.readJSON(w, r, createReq)
 	if err != nil {
-		app.badRequestResponse(w, r, err)
+		app.errorResponse(w, r, http.StatusBadRequest, err.Error())
 		return
 	}
 
 	shop, err := app.grpcClient.CreateShop(app.ctx, createReq)
 	if err != nil {
-		app.serverErrorResponse(w, r, err)
+		app.errorResponse(w, r, http.StatusInternalServerError, err.Error())
 		return
 	}
 
@@ -101,7 +101,7 @@ func (app *application) HandleGetShop(w http.ResponseWriter, r *http.Request) {
 
 	shop, err := app.grpcClient.GetShopByID(app.ctx, &protoReq)
 	if err != nil {
-		app.serverErrorResponse(w, r, err)
+		app.errorResponse(w, r, http.StatusInternalServerError, err.Error())
 		return
 	}
 
@@ -115,13 +115,13 @@ func (app *application) HandleCreateProduct(w http.ResponseWriter, r *http.Reque
 	createReq := &proto.CreateProductRequest{}
 	err := app.readJSON(w, r, createReq)
 	if err != nil {
-		app.badRequestResponse(w, r, err)
+		app.errorResponse(w, r, http.StatusBadRequest, err.Error())
 		return
 	}
 
 	product, err := app.grpcClient.CreateProduct(app.ctx, createReq)
 	if err != nil {
-		app.serverErrorResponse(w, r, err)
+		app.errorResponse(w, r, http.StatusInternalServerError, err.Error())
 		return
 	}
 
@@ -140,7 +140,7 @@ func (app *application) HandleGetProduct(w http.ResponseWriter, r *http.Request)
 
 	product, err := app.grpcClient.GetProductByID(app.ctx, &protoReq)
 	if err != nil {
-		app.serverErrorResponse(w, r, err)
+		app.errorResponse(w, r, http.StatusInternalServerError, err.Error())
 		return
 	}
 
@@ -154,13 +154,13 @@ func (app *application) HandleAddProductToShop(w http.ResponseWriter, r *http.Re
 	addProduct := &proto.AddServiceableProductRequest{}
 	err := app.readJSON(w, r, addProduct)
 	if err != nil {
-		app.badRequestResponse(w, r, err)
+		app.errorResponse(w, r, http.StatusBadRequest, err.Error())
 		return
 	}
 
 	shop, err := app.grpcClient.AddServiceableProduct(app.ctx, addProduct)
 	if err != nil {
-		app.serverErrorResponse(w, r, err)
+		app.errorResponse(w, r, http.StatusInternalServerError, err.Error())
 		return
 	}
 
@@ -184,7 +184,7 @@ func (app *application) HandleGetServiceableProducts(w http.ResponseWriter, r *h
 
 	products, err := app.grpcClient.GetServiceableProducts(app.ctx, &protoReq)
 	if err != nil {
-		app.serverErrorResponse(w, r, err)
+		app.errorResponse(w, r, http.StatusInternalServerError, err.Error())
 		return
 	}
 
@@ -205,7 +205,7 @@ func (app *application) HandleGetInventory(w http.ResponseWriter, r *http.Reques
 
 	inventory, err := app.grpcClient.GetInventory(app.ctx, &protoReq)
 	if err != nil {
-		app.serverErrorResponse(w, r, err)
+		app.errorResponse(w, r, http.StatusInternalServerError, err.Error())
 		return
 	}
 
@@ -223,13 +223,13 @@ func (app *application) HandleUpdateInventory(w http.ResponseWriter, r *http.Req
 
 	err := app.readJSON(w, r, updateReq)
 	if err != nil {
-		app.badRequestResponse(w, r, err)
+		app.errorResponse(w, r, http.StatusBadRequest, err.Error())
 		return
 	}
 
 	inventory, err := app.grpcClient.UpdateInventory(app.ctx, updateReq)
 	if err != nil {
-		app.serverErrorResponse(w, r, err)
+		app.errorResponse(w, r, http.StatusInternalServerError, err.Error())
 		return
 	}
 
@@ -249,7 +249,7 @@ func (app *application) HandleGetNearestNeighbour(w http.ResponseWriter, r *http
 
 	neighbour, err := app.grpcClient.GetNearestNeighbour(app.ctx, &protoReq)
 	if err != nil {
-		app.serverErrorResponse(w, r, err)
+		app.errorResponse(w, r, http.StatusInternalServerError, err.Error())
 		return
 	}
 
@@ -264,7 +264,7 @@ func (app *application) HandleGetShopForUser(w http.ResponseWriter, r *http.Requ
 	userId := params.ByName("userId")
 	maxDist, err := strconv.ParseFloat(params.ByName("maxDist"), 64)
 	if err != nil {
-		app.serverErrorResponse(w, r, err)
+		app.errorResponse(w, r, http.StatusBadRequest, err.Error())
 		return
 	}
 
@@ -275,7 +275,7 @@ func (app *application) HandleGetShopForUser(w http.ResponseWriter, r *http.Requ
 
 	shop, err := app.grpcClient.GetShopForUser(app.ctx, &protoReq)
 	if err != nil {
-		app.serverErrorResponse(w, r, err)
+		app.errorResponse(w, r, http.StatusInternalServerError, err.Error())
 		return
 	}
 
