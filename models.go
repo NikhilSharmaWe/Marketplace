@@ -1,13 +1,5 @@
 package main
 
-import (
-	"context"
-	"log"
-
-	"go.mongodb.org/mongo-driver/mongo"
-	"go.mongodb.org/mongo-driver/mongo/options"
-)
-
 type Shop struct {
 	ID                    string     `bson:"_id,omitempty"`
 	Name                  string     `bson:"name"`
@@ -17,11 +9,19 @@ type Shop struct {
 	Coordinates           [2]float64 `bson:"coordinates"`
 }
 
+func (s Shop) Id() string {
+	return s.ID
+}
+
 type Product struct {
 	ID          string  `bson:"_id,omitempty"`
 	Name        string  `bson:"name"`
 	Description string  `bson:"description"`
 	Price       float64 `bson:"price"`
+}
+
+func (s Product) Id() string {
+	return s.ID
 }
 
 type Inventory struct {
@@ -31,16 +31,28 @@ type Inventory struct {
 	Quantity  int    `bson:"quantity"`
 }
 
+func (s Inventory) Id() string {
+	return s.ID
+}
+
 type ServiceableProduct struct {
 	ID        string `bson:"_id,omitempty"`
 	ProductID string `bson:"product_id"`
 	ShopID    string `bson:"shop_id"`
 }
 
+func (s ServiceableProduct) Id() string {
+	return s.ID
+}
+
 type ShopsServiceableProducts struct {
 	ID       string    `bson:"_id,omitempty"`
 	ShopID   string    `bson:"shop_id"`
 	Products []Product `bson:"products"`
+}
+
+func (s ShopsServiceableProducts) Id() string {
+	return s.ID
 }
 
 type User struct {
@@ -50,19 +62,6 @@ type User struct {
 	Coordinates [2]float64 `bson:"coordinates"`
 }
 
-func CreateMongoCollection(ctx context.Context, name string) *mongo.Collection {
-	clientOptions := options.Client().ApplyURI("mongodb://127.0.0.1:27017")
-	client, err := mongo.Connect(ctx, clientOptions)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	err = client.Ping(ctx, nil)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	collection := client.Database("market").Collection(name)
-
-	return collection
+func (s User) Id() string {
+	return s.ID
 }

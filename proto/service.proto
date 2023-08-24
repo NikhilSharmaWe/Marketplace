@@ -62,7 +62,7 @@ message Shop {
   string id = 1;
   string name = 2;
   string location = 3;
-  string operationhours = 4;
+  string operationHours = 4;
   repeated Product serviceableProducts = 5;
   Coordinates coordinates = 6;
 }
@@ -139,7 +139,6 @@ message Coordinates {
 message GetShopForUserRequest {
 	string userId = 1;
 	double maxDistanceInKM = 2;
-	string productId = 3;
 }
 
 message GetNearestNeighbourRequest{

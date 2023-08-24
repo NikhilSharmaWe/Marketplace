@@ -2,29 +2,18 @@ package main
 
 import (
 	"context"
-	"errors"
+	"fmt"
 	"log"
-	"net"
 
 	"github.com/NikhilSharmaWe/marketplace/proto"
-	uuid "github.com/satori/go.uuid"
+	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
-	"google.golang.org/grpc"
 )
 
-func makeGRPCServerAndRun(listenAddr string, svc application) error {
+func (svc application) setupGRPCServer() {
 	grpcPriceFetcher := NewGRPCPriceFetcherServer(svc)
-	ln, err := net.Listen("tcp", listenAddr)
-	if err != nil {
-		return err
-	}
-
-	opts := []grpc.ServerOption{}
-	server := grpc.NewServer(opts...)
-	proto.RegisterMarketplaceServiceServer(server, grpcPriceFetcher)
-
-	return server.Serve(ln)
+	proto.RegisterMarketplaceServiceServer(svc.goApiBoot.GrpcServer, grpcPriceFetcher)
 }
 
 type GRPCMarketPlaceServer struct {
@@ -38,9 +27,11 @@ func NewGRPCPriceFetcherServer(svc application) *GRPCMarketPlaceServer {
 	}
 }
 
-func (s *GRPCMarketPlaceServer) CreateShop(ctx context.Context, req *proto.CreateShopRequest) (*proto.Shop, error) {
-	ctx = context.WithValue(ctx, "requestID", uuid.NewV4().String())
+func (u *GRPCMarketPlaceServer) AuthFuncOverride(ctx context.Context, fullMethodName string) (context.Context, error) {
+	return ctx, nil
+}
 
+func (s *GRPCMarketPlaceServer) CreateShop(ctx context.Context, req *proto.CreateShopRequest) (*proto.Shop, error) {
 	shop := Shop{
 		ID:             primitive.NewObjectID().Hex(),
 		Name:           req.Name,
@@ -52,9 +43,8 @@ func (s *GRPCMarketPlaceServer) CreateShop(ctx context.Context, req *proto.Creat
 		},
 	}
 
-	err := s.svc.Create(ctx, s.svc.shopCollection, shop)
+	err := getErrorFromChan(s.svc.shopRepo.Save(shop))
 	if err != nil {
-		log.Println("fail to creating new shop:", err)
 		return nil, err
 	}
 
@@ -62,7 +52,7 @@ func (s *GRPCMarketPlaceServer) CreateShop(ctx context.Context, req *proto.Creat
 		Id:             shop.ID,
 		Name:           shop.Name,
 		Location:       shop.Location,
-		Operationhours: shop.OperationHours,
+		OperationHours: shop.OperationHours,
 		Coordinates: &proto.Coordinates{
 			Latitude:  shop.Coordinates[0],
 			Longitude: shop.Coordinates[1],
@@ -71,17 +61,15 @@ func (s *GRPCMarketPlaceServer) CreateShop(ctx context.Context, req *proto.Creat
 }
 
 func (s *GRPCMarketPlaceServer) CreateProduct(ctx context.Context, req *proto.CreateProductRequest) (*proto.Product, error) {
-	ctx = context.WithValue(ctx, "requestID", uuid.NewV4().String())
-
 	product := Product{
 		ID:          primitive.NewObjectID().Hex(),
 		Name:        req.Name,
 		Description: req.Description,
 		Price:       float64(req.Price),
 	}
-	err := s.svc.Create(ctx, s.svc.productCollection, product)
+
+	err := getErrorFromChan(s.svc.productRepo.Save(product))
 	if err != nil {
-		log.Println("fail to creating new product:", err)
 		return nil, err
 	}
 
@@ -94,8 +82,6 @@ func (s *GRPCMarketPlaceServer) CreateProduct(ctx context.Context, req *proto.Cr
 }
 
 func (s *GRPCMarketPlaceServer) CreateUser(ctx context.Context, req *proto.CreateUserRequest) (*proto.User, error) {
-	ctx = context.WithValue(ctx, "requestID", uuid.NewV4().String())
-
 	user := User{
 		ID:       primitive.NewObjectID().Hex(),
 		Name:     req.Name,
@@ -106,9 +92,8 @@ func (s *GRPCMarketPlaceServer) CreateUser(ctx context.Context, req *proto.Creat
 		},
 	}
 
-	err := s.svc.Create(ctx, s.svc.userCollection, user)
+	err := getErrorFromChan(s.svc.userRepo.Save(user))
 	if err != nil {
-		log.Println("fail to creating new user:", err)
 		return nil, err
 	}
 
@@ -124,13 +109,11 @@ func (s *GRPCMarketPlaceServer) CreateUser(ctx context.Context, req *proto.Creat
 }
 
 func (s *GRPCMarketPlaceServer) GetShopByID(ctx context.Context, req *proto.GetRequest) (*proto.Shop, error) {
-	ctx = context.WithValue(ctx, "requestID", uuid.NewV4().String())
 	id := req.Id
-	shop := Shop{}
+	shop := &Shop{}
 
-	err := s.svc.GetByID(id, s.svc.shopCollection, &shop)
+	shop, err := getShopOrError(s.svc.shopRepo.FindOneById(id))
 	if err != nil {
-		log.Printf("fail to get shop with id [%s]: %s", req.Id, err)
 		return nil, err
 	}
 
@@ -143,7 +126,7 @@ func (s *GRPCMarketPlaceServer) GetShopByID(ctx context.Context, req *proto.GetR
 		Id:                  shop.ID,
 		Name:                shop.Name,
 		Location:            shop.Location,
-		Operationhours:      shop.OperationHours,
+		OperationHours:      shop.OperationHours,
 		ServiceableProducts: products.Products,
 		Coordinates: &proto.Coordinates{
 			Latitude:  shop.Coordinates[0],
@@ -153,13 +136,11 @@ func (s *GRPCMarketPlaceServer) GetShopByID(ctx context.Context, req *proto.GetR
 }
 
 func (s *GRPCMarketPlaceServer) GetProductByID(ctx context.Context, req *proto.GetRequest) (*proto.Product, error) {
-	ctx = context.WithValue(ctx, "requestID", uuid.NewV4().String())
 	id := req.Id
-	product := Product{}
+	product := &Product{}
 
-	err := s.svc.GetByID(id, s.svc.productCollection, &product)
+	product, err := getProductOrError(s.svc.productRepo.FindOneById(id))
 	if err != nil {
-		log.Printf("fail to get product with id [%s]: %s", req.Id, err)
 		return nil, err
 	}
 
@@ -172,13 +153,11 @@ func (s *GRPCMarketPlaceServer) GetProductByID(ctx context.Context, req *proto.G
 }
 
 func (s *GRPCMarketPlaceServer) GetUserByID(ctx context.Context, req *proto.GetRequest) (*proto.User, error) {
-	ctx = context.WithValue(ctx, "requestID", uuid.NewV4().String())
 	id := req.Id
-	user := User{}
+	user := &User{}
 
-	err := s.svc.GetByID(id, s.svc.userCollection, &user)
+	user, err := getUserOrError(s.svc.userRepo.FindOneById(id))
 	if err != nil {
-		log.Printf("fail to get user with id [%s]: %s", req.Id, err)
 		return nil, err
 	}
 
@@ -194,12 +173,15 @@ func (s *GRPCMarketPlaceServer) GetUserByID(ctx context.Context, req *proto.GetR
 }
 
 func (s *GRPCMarketPlaceServer) AddServiceableProduct(ctx context.Context, req *proto.AddServiceableProductRequest) (*proto.Shop, error) {
-	ctx = context.WithValue(ctx, "requestID", uuid.NewV4().String())
 	shopId := req.ShopId
 	productId := req.ProductId
-	shop := Shop{}
+	shop := &Shop{}
 
-	err := s.svc.GetByID(shopId, s.svc.shopCollection, &shop)
+	if !s.svc.productRepo.IsExistsById(productId) {
+		return nil, fmt.Errorf("product with id [%s] do not exists", productId)
+	}
+
+	shop, err := getShopOrError(s.svc.shopRepo.FindOneById(shopId))
 	if err != nil {
 		return nil, err
 	}
@@ -213,29 +195,31 @@ func (s *GRPCMarketPlaceServer) AddServiceableProduct(ctx context.Context, req *
 
 	if !alreadyExists {
 		products := append(shop.ServiceableProductsId, productId)
+		shop.ServiceableProductsId = products
 
-		err = s.svc.UpdateServiceableProductsForShop(ctx, shopId, products)
+		errCh := s.svc.shopRepo.Save(shop)
+		err := getErrorFromChan(errCh)
 		if err != nil {
-			log.Printf("fail to update serviceable products for shop with id [%s] by adding product with id[%s]: %s", req.ShopId, req.ProductId, err)
 			return nil, err
 		}
 	}
 
-	_, err = s.GetInventory(ctx, &proto.GetInventoryRequest{
-		ShopId:    shopId,
-		ProductId: productId,
-	})
+	_, err = getInventoryOrError(s.svc.inventoryRepo.FindOne(primitive.M{"shop_id": shopId, "product_id": productId}))
+	if err != nil {
+		if err == mongo.ErrNoDocuments {
+			inventory := Inventory{
+				ID:        primitive.NewObjectID().Hex(),
+				ShopID:    shopId,
+				ProductID: productId,
+				Quantity:  0,
+			}
 
-	if err == mongo.ErrNoDocuments {
-		inventory := Inventory{
-			ID:        primitive.NewObjectID().Hex(),
-			ShopID:    shopId,
-			ProductID: productId,
-			Quantity:  0,
-		}
-
-		err = s.svc.Create(ctx, s.svc.inventoryCollection, inventory)
-		if err != nil {
+			errCh := s.svc.inventoryRepo.Save(inventory)
+			err := getErrorFromChan(errCh)
+			if err != nil {
+				return nil, err
+			}
+		} else {
 			return nil, err
 		}
 	}
@@ -246,17 +230,14 @@ func (s *GRPCMarketPlaceServer) AddServiceableProduct(ctx context.Context, req *
 }
 
 func (s *GRPCMarketPlaceServer) GetServiceableProducts(ctx context.Context, req *proto.GetServiceableProductsRequest) (*proto.Products, error) {
-	ctx = context.WithValue(ctx, "requestID", uuid.NewV4().String())
+	var serviceableProducts []*proto.Product
 	id := req.ShopId
-	shop := Shop{}
+	shop := &Shop{}
 
-	err := s.svc.GetByID(id, s.svc.shopCollection, &shop)
+	shop, err := getShopOrError(s.svc.shopRepo.FindOneById(id))
 	if err != nil {
-		log.Printf("fail to get shop with id [%s]: %s", req.ShopId, err)
 		return nil, err
 	}
-
-	var serviceableProducts []*proto.Product
 
 	for _, productId := range shop.ServiceableProductsId {
 		product, err := s.GetProductByID(ctx, &proto.GetRequest{
@@ -276,14 +257,12 @@ func (s *GRPCMarketPlaceServer) GetServiceableProducts(ctx context.Context, req 
 }
 
 func (s *GRPCMarketPlaceServer) GetInventory(ctx context.Context, req *proto.GetInventoryRequest) (*proto.Inventory, error) {
-	ctx = context.WithValue(ctx, "requestID", uuid.NewV4().String())
 	shopId := req.ShopId
 	productId := req.ProductId
+	inventory := &Inventory{}
 
-	inventory := Inventory{}
-	err := s.svc.GetByShopAndProductID(shopId, productId, s.svc.inventoryCollection, &inventory)
+	inventory, err := getInventoryOrError(s.svc.inventoryRepo.FindOne(primitive.M{"shop_id": shopId, "product_id": productId}))
 	if err != nil {
-		log.Printf("fail to get inventory of shop with id [%s] for product with id [%s]: %s", shopId, productId, err)
 		return nil, err
 	}
 
@@ -296,28 +275,28 @@ func (s *GRPCMarketPlaceServer) GetInventory(ctx context.Context, req *proto.Get
 }
 
 func (s *GRPCMarketPlaceServer) UpdateInventory(ctx context.Context, req *proto.UpdateInventoryRequest) (*proto.Inventory, error) {
-	ctx = context.WithValue(ctx, "requestID", uuid.NewV4().String())
 	shopId := req.ShopId
 	productId := req.ProductId
+	inventory := &Inventory{}
 
-	inventory := Inventory{}
-	err := s.svc.GetByShopAndProductID(shopId, productId, s.svc.inventoryCollection, &inventory)
+	inventory, err := getInventoryOrError(s.svc.inventoryRepo.FindOne(primitive.M{"shop_id": shopId, "product_id": productId}))
 	if err != nil {
-		log.Printf("fail to get inventory of shop with id [%s] for product with id [%s]: %s", shopId, productId, err)
 		return nil, err
 	}
 
-	updatedQuantity := inventory.Quantity
 	if req.Add {
-		updatedQuantity += int(req.Change)
-
+		inventory.Quantity = inventory.Quantity + int(req.Change)
 	} else {
-		updatedQuantity -= int(req.Change)
+		inventory.Quantity = inventory.Quantity - int(req.Change)
 	}
 
-	err = s.svc.UpdateInventory(ctx, inventory.ShopID, inventory.ProductID, updatedQuantity)
+	if inventory.Quantity < 0 {
+		return nil, fmt.Errorf("inventory's quantity cannot be negative")
+	}
+
+	errCh := s.svc.inventoryRepo.Save(inventory)
+	err = getErrorFromChan(errCh)
 	if err != nil {
-		log.Printf("fail to update inventory of shop with id [%s] for product with id [%s]: %s", shopId, productId, err)
 		return nil, err
 	}
 
@@ -325,27 +304,24 @@ func (s *GRPCMarketPlaceServer) UpdateInventory(ctx context.Context, req *proto.
 		Id:        inventory.ID,
 		ShopId:    inventory.ShopID,
 		ProductId: inventory.ProductID,
-		Quantity:  int32(updatedQuantity),
+		Quantity:  int32(inventory.Quantity),
 	}, nil
 }
 
 func (s *GRPCMarketPlaceServer) GetShopsByServiceableProducts(ctx context.Context, req *proto.GetShopsByServiceableProductsRequest) (*proto.Shops, error) {
-	ctx = context.WithValue(ctx, "requestID", uuid.NewV4().String())
+	var shops []Shop
 	productId := req.ProductId
+	filter := bson.M{"serviceableProductsId": productId}
 
-	shops, err := s.svc.GetShopsWithProduct(ctx, productId)
+	shops, err := getShopsOrError(s.svc.shopRepo.Find(filter, nil, 0, 0))
 	if err != nil {
-		if err == mongo.ErrNoDocuments {
-			return nil, errors.New("No shops with this product")
-		} else {
-			return nil, err
-		}
+		return nil, err
 	}
 
 	resultShops := proto.Shops{}
 
 	for _, shop := range shops {
-		pshop, err := s.ParseShop(ctx, shop)
+		pshop, err := s.ParseShop(ctx, &shop)
 		if err != nil {
 			log.Printf("fail to parse shop with id [%s]: %s", shop.ID, err)
 			return nil, err
@@ -360,25 +336,24 @@ func (s *GRPCMarketPlaceServer) GetShopsByServiceableProducts(ctx context.Contex
 }
 
 func (s *GRPCMarketPlaceServer) GetShopForUser(ctx context.Context, req *proto.GetShopForUserRequest) (*proto.Shops, error) {
-	ctx = context.WithValue(ctx, "requestID", uuid.NewV4().String())
+	var shops []Shop
 	userId := req.UserId
-	user := User{}
+	user := &User{}
 	resultShops := proto.Shops{}
 
-	err := s.svc.GetByID(userId, s.svc.userCollection, &user)
+	user, err := getUserOrError(s.svc.userRepo.FindOneById(userId))
 	if err != nil {
-		log.Printf("fail to get user with id [%s]: %s", userId, err)
 		return nil, err
 	}
 
-	shops, err := s.svc.GetAllShops(ctx)
+	shops, err = getShopsOrError(s.svc.shopRepo.Find(nil, nil, 0, 0))
 	if err != nil {
 		return nil, err
 	}
 
 	for _, shop := range shops {
 		if calculateDistance(user.Coordinates, shop.Coordinates) < req.MaxDistanceInKM {
-			pshop, err := s.ParseShop(ctx, shop)
+			pshop, err := s.ParseShop(ctx, &shop)
 			if err != nil {
 				log.Printf("fail to parse shop with id [%s]: %s", shop.ID, err)
 				return nil, err
@@ -394,25 +369,30 @@ func (s *GRPCMarketPlaceServer) GetShopForUser(ctx context.Context, req *proto.G
 }
 
 func (s *GRPCMarketPlaceServer) GetNearestNeighbour(ctx context.Context, req *proto.GetNearestNeighbourRequest) (*proto.User, error) {
-	ctx = context.WithValue(ctx, "requestID", uuid.NewV4().String())
+	var users []User
 	userId := req.UserId
-	user := User{}
+	user := &User{}
 
-	err := s.svc.GetByID(userId, s.svc.userCollection, &user)
+	user, err := getUserOrError(s.svc.userRepo.FindOneById(userId))
 	if err != nil {
-		log.Printf("fail to get user with id [%s]: %s", userId, err)
 		return nil, err
 	}
 
-	users, err := s.svc.GetAllUser(ctx)
+	users, err = getUsersOrError(s.svc.userRepo.Find(nil, nil, 0, 0))
 	if err != nil {
-		log.Println("fail to get all users", err)
 		return nil, err
 	}
 
-	nearest := users[0]
+	var nearest User
+	if user.ID == users[0].ID {
+		nearest = users[1]
+	} else {
+		nearest = users[0]
+
+	}
+
 	nearestDistance := calculateDistance(user.Coordinates, nearest.Coordinates)
-	for _, kuser := range users {
+	for _, kuser := range users[1:] {
 		distance := calculateDistance(user.Coordinates, kuser.Coordinates)
 		if distance < nearestDistance && kuser.ID != user.ID {
 			nearest = kuser
@@ -429,6 +409,7 @@ func (s *GRPCMarketPlaceServer) GetNearestNeighbour(ctx context.Context, req *pr
 			Longitude: nearest.Coordinates[1],
 		},
 	}, nil
+
 }
 
 func (s *GRPCMarketPlaceServer) ParseShop(ctx context.Context, shop *Shop) (*proto.Shop, error) {
@@ -443,7 +424,7 @@ func (s *GRPCMarketPlaceServer) ParseShop(ctx context.Context, shop *Shop) (*pro
 		Id:                  shop.ID,
 		Name:                shop.Name,
 		Location:            shop.Location,
-		Operationhours:      shop.OperationHours,
+		OperationHours:      shop.OperationHours,
 		ServiceableProducts: products.Products,
 		Coordinates: &proto.Coordinates{
 			Latitude:  shop.Coordinates[0],
