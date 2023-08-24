@@ -50,62 +50,12 @@ func getErrorFromChan(channel chan error) error {
 	return data
 }
 
-func getUserOrError(userCh <-chan *User, errCh <-chan error) (*User, error) {
-	var user *User
+func getItemOrError[T any](itemCh <-chan T, errCh <-chan error) (T, error) {
+	var item T
 	var err error
 	select {
-	case user = <-userCh:
+	case item = <-itemCh:
 	case err = <-errCh:
 	}
-	return user, err
-}
-
-func getUsersOrError(usersCh <-chan []User, errCh <-chan error) ([]User, error) {
-	var users []User
-	var err error
-	select {
-	case users = <-usersCh:
-	case err = <-errCh:
-	}
-	return users, err
-}
-
-func getShopOrError(shopCh <-chan *Shop, errCh <-chan error) (*Shop, error) {
-	var shop *Shop
-	var err error
-	select {
-	case shop = <-shopCh:
-	case err = <-errCh:
-	}
-	return shop, err
-}
-
-func getShopsOrError(shopsCh <-chan []Shop, errCh <-chan error) ([]Shop, error) {
-	var shops []Shop
-	var err error
-	select {
-	case shops = <-shopsCh:
-	case err = <-errCh:
-	}
-	return shops, err
-}
-
-func getProductOrError(proCh <-chan *Product, errCh <-chan error) (*Product, error) {
-	var product *Product
-	var err error
-	select {
-	case product = <-proCh:
-	case err = <-errCh:
-	}
-	return product, err
-}
-
-func getInventoryOrError(invCh <-chan *Inventory, errCh <-chan error) (*Inventory, error) {
-	var inventory *Inventory
-	var err error
-	select {
-	case inventory = <-invCh:
-	case err = <-errCh:
-	}
-	return inventory, err
+	return item, err
 }

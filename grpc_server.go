@@ -114,7 +114,7 @@ func (s *GRPCMarketPlaceServer) GetShopByID(ctx context.Context, req *proto.GetR
 	id := req.Id
 	shop := &Shop{}
 
-	shop, err := getShopOrError(s.svc.shopRepo.FindOneById(id))
+	shop, err := getItemOrError(s.svc.shopRepo.FindOneById(id))
 	if err != nil {
 		s.svc.logger.Println("Error: ", err)
 		return nil, errors.New("failed to get shop")
@@ -143,7 +143,7 @@ func (s *GRPCMarketPlaceServer) GetProductByID(ctx context.Context, req *proto.G
 	id := req.Id
 	product := &Product{}
 
-	product, err := getProductOrError(s.svc.productRepo.FindOneById(id))
+	product, err := getItemOrError(s.svc.productRepo.FindOneById(id))
 	if err != nil {
 		s.svc.logger.Println("Error: ", err)
 		return nil, errors.New("failed to get product")
@@ -161,7 +161,7 @@ func (s *GRPCMarketPlaceServer) GetUserByID(ctx context.Context, req *proto.GetR
 	id := req.Id
 	user := &User{}
 
-	user, err := getUserOrError(s.svc.userRepo.FindOneById(id))
+	user, err := getItemOrError(s.svc.userRepo.FindOneById(id))
 	if err != nil {
 		s.svc.logger.Println("Error: ", err)
 		return nil, errors.New("failed to get user: %s")
@@ -188,7 +188,7 @@ func (s *GRPCMarketPlaceServer) AddServiceableProduct(ctx context.Context, req *
 		return nil, errors.New("product does not exists")
 	}
 
-	shop, err := getShopOrError(s.svc.shopRepo.FindOneById(shopId))
+	shop, err := getItemOrError(s.svc.shopRepo.FindOneById(shopId))
 	if err != nil {
 		s.svc.logger.Println("Error: ", err)
 		return nil, errors.New("failed to get shop")
@@ -213,7 +213,7 @@ func (s *GRPCMarketPlaceServer) AddServiceableProduct(ctx context.Context, req *
 		}
 	}
 
-	_, err = getInventoryOrError(s.svc.inventoryRepo.FindOne(primitive.M{"shop_id": shopId, "product_id": productId}))
+	_, err = getItemOrError(s.svc.inventoryRepo.FindOne(primitive.M{"shop_id": shopId, "product_id": productId}))
 	if err != nil {
 		if err == mongo.ErrNoDocuments {
 			inventory := Inventory{
@@ -245,7 +245,7 @@ func (s *GRPCMarketPlaceServer) GetServiceableProducts(ctx context.Context, req 
 	id := req.ShopId
 	shop := &Shop{}
 
-	shop, err := getShopOrError(s.svc.shopRepo.FindOneById(id))
+	shop, err := getItemOrError(s.svc.shopRepo.FindOneById(id))
 	if err != nil {
 		s.svc.logger.Println("Error: ", err)
 		return nil, errors.New("failed to get shop")
@@ -273,7 +273,7 @@ func (s *GRPCMarketPlaceServer) GetInventory(ctx context.Context, req *proto.Get
 	productId := req.ProductId
 	inventory := &Inventory{}
 
-	inventory, err := getInventoryOrError(s.svc.inventoryRepo.FindOne(primitive.M{"shop_id": shopId, "product_id": productId}))
+	inventory, err := getItemOrError(s.svc.inventoryRepo.FindOne(primitive.M{"shop_id": shopId, "product_id": productId}))
 	if err != nil {
 		s.svc.logger.Println("Error: ", err)
 		return nil, errors.New("failed to get inventory")
@@ -292,7 +292,7 @@ func (s *GRPCMarketPlaceServer) UpdateInventory(ctx context.Context, req *proto.
 	productId := req.ProductId
 	inventory := &Inventory{}
 
-	inventory, err := getInventoryOrError(s.svc.inventoryRepo.FindOne(primitive.M{"shop_id": shopId, "product_id": productId}))
+	inventory, err := getItemOrError(s.svc.inventoryRepo.FindOne(primitive.M{"shop_id": shopId, "product_id": productId}))
 	if err != nil {
 		s.svc.logger.Println("Error: ", err)
 		return nil, errors.New("failed to get inventory")
@@ -328,7 +328,7 @@ func (s *GRPCMarketPlaceServer) GetShopsByServiceableProducts(ctx context.Contex
 	productId := req.ProductId
 	filter := bson.M{"serviceableProductsId": productId}
 
-	shops, err := getShopsOrError(s.svc.shopRepo.Find(filter, nil, 0, 0))
+	shops, err := getItemOrError(s.svc.shopRepo.Find(filter, nil, 0, 0))
 	if err != nil {
 		s.svc.logger.Println("Error: ", err)
 		return nil, errors.New("failed to get shops")
@@ -357,13 +357,13 @@ func (s *GRPCMarketPlaceServer) GetShopForUser(ctx context.Context, req *proto.G
 	user := &User{}
 	resultShops := proto.Shops{}
 
-	user, err := getUserOrError(s.svc.userRepo.FindOneById(userId))
+	user, err := getItemOrError(s.svc.userRepo.FindOneById(userId))
 	if err != nil {
 		s.svc.logger.Println("Error: ", err)
 		return nil, errors.New("failed to get user")
 	}
 
-	shops, err = getShopsOrError(s.svc.shopRepo.Find(nil, nil, 0, 0))
+	shops, err = getItemOrError(s.svc.shopRepo.Find(nil, nil, 0, 0))
 	if err != nil {
 		s.svc.logger.Println("Error: ", err)
 		return nil, errors.New("failed to get all shops")
@@ -391,13 +391,13 @@ func (s *GRPCMarketPlaceServer) GetNearestNeighbour(ctx context.Context, req *pr
 	userId := req.UserId
 	user := &User{}
 
-	user, err := getUserOrError(s.svc.userRepo.FindOneById(userId))
+	user, err := getItemOrError(s.svc.userRepo.FindOneById(userId))
 	if err != nil {
 		s.svc.logger.Println("Error: ", err)
 		return nil, errors.New("failed to get user")
 	}
 
-	users, err = getUsersOrError(s.svc.userRepo.Find(nil, nil, 0, 0))
+	users, err = getItemOrError(s.svc.userRepo.Find(nil, nil, 0, 0))
 	if err != nil {
 		s.svc.logger.Println("Error: ", err)
 		return nil, errors.New("failed to get all users")
